@@ -6,10 +6,8 @@
 
 int main()
 {
-  char	mapl[] = "qwertyuiopasdfghjklzxcvbnm"; // for encoding letter
-  char	mapd[] = "1357924680"; // for encoding digit
-  int	fd[2];	// for the pipe
-  char	buf[80];
+  int	fd[2];
+  char buf[80];
   int	i, n, childid;
 
   if (pipe(fd) < 0) {
@@ -36,15 +34,8 @@ int main()
            if (n <= 0) break; // EOF or error
            buf[--n] = 0;
            printf("<parent> message [%s] is of length %d\n",buf,n);
-           for (i = 0; i < n; i++) // encrypt
-               if (buf[i] >= 'a' && buf[i] <= 'z')
-                  buf[i] = mapl[buf[i]-'a'];
-               else if (buf[i] >= 'A' && buf[i] <= 'Z')
-                  buf[i] = mapl[buf[i]-'A']-('a'-'A');
-               else if (buf[i] >= '0' && buf[i] <= '9')
-                  buf[i] = mapd[buf[i]-'0'];
-           printf("<parent> sending encrypted message [%s] to child\n",buf);
-           write(fd[1],buf,n); // send the encrypted string
+           printf("<parent> sending message [%s] to child\n",buf);
+           write(fd[1],buf,n); // send the string
      }
      close(fd[1]);
      wait(NULL);
