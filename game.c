@@ -6,42 +6,61 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-void sortTheCardSuit(int i, int fd2[4][2], char playercard[13][3]) {
-    int j, k, h;
-	char temp;
-	char tempNumber;
+// void sortTheCardSuit(int i, int fd2[4][2], char playercard[13][3]) {
+//     int j, k, h;
+// 	char temp;
+// 	char tempNumber;
 
-    int suitCounts[5] = {0};
+//     int suitCounts[5] = {0};
 
-    // printf("test-- %c  \n", playercard[1][0]);
+//     // printf("test-- %c  \n", playercard[1][0]);
     
-    // calculateSuitCounts(cards, suitCounts);
+//     // calculateSuitCounts(cards, suitCounts);
 
-    char rank[] = "AKQJT98765432";
+//     char rank[] = "AKQJT98765432";
     
-    //bubble sort
+//     //bubble sort
 
-    // for (j = 0; j < 13; j++){
-    //     for (k = 0; k < 13 - j - 1; k++){
-    //         if (playercard[k][i] > playercard[k+1][i]){
-    //             temp = playercard[k][i];
-    //             playercard[k][i] = playercard[k+1][i];
-    //             playercard[k+1][i] = temp;
-    //         }
-    //     }
-    // }
-
-    
+//     // for (j = 0; j < 13; j++){
+//     //     for (k = 0; k < 13 - j - 1; k++){
+//     //         if (playercard[k][i] > playercard[k+1][i]){
+//     //             temp = playercard[k][i];
+//     //             playercard[k][i] = playercard[k+1][i];
+//     //             playercard[k+1][i] = temp;
+//     //         }
+//     //     }
+//     // }
 
     
 
-    // printf("Child %d, pid %d: arranged ", i+1, getpid());
-    // //print the array
-    // for (h = 0; h < 13; h++){
-    //     printf("%c ", playercard[h][i]);
-    // }
-    // printf("\n");
+    
 
+//     // printf("Child %d, pid %d: arranged ", i+1, getpid());
+//     // //print the array
+//     // for (h = 0; h < 13; h++){
+//     //     printf("%c ", playercard[h][i]);
+//     // }
+//     // printf("\n");
+
+// }
+
+int getSuitIndex(char suit) {
+    char suits[] = "SHCD";
+    for (int i = 0; i < 4; i++) {
+        if (suits[i] == suit) {
+            return i;
+        }
+    }
+    return -1;
+}
+int getBigrank(char rank) {
+    char ranks[] = "AKQJT98765432";
+    for (int i = 0; i < 13; i++) {
+        if (ranks[i] == rank) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 void readAssignedCards(int i, int fd2[4][2], char playercard[13][3]){
@@ -53,12 +72,48 @@ void readAssignedCards(int i, int fd2[4][2], char playercard[13][3]){
             printf("%s ", &playercard[j][i]); // Print the value of child[j][3] instead of child[j]
         }
         printf("\n");
+        //sort the playercard by suit here
 
-        if(i==0){
-        printf("1test-- %s%s  \n", &playercard[0][0], &playercard[1][0]);
-        printf("2test-- %s%s  \n", &playercard[2][1], &playercard[3][0]);
-        printf("3test-- %s%s  \n", &playercard[4][0], &playercard[5][0]);
-        }
+        int k;
+        char temp;
+
+            // Bubble sort by suit S>H>C>D
+            for (j = 0; j < 13; j++) {
+                for (k = 0; k < 13 - j - 1; k++) {
+
+                    if (getBigrank(playercard[k][i+1]) > getBigrank(playercard[k + 1][i+1])) {
+                        // Swap cards
+                        temp = playercard[k][i];
+                        playercard[k][i] = playercard[k + 1][i];
+                        playercard[k + 1][i] = temp;
+
+                        temp = playercard[k][i+1];
+                        playercard[k][i+1] = playercard[k + 1][i+1];
+                        playercard[k + 1][i+1] = temp;
+                    }
+                    if (getSuitIndex(playercard[k][i]) > getSuitIndex(playercard[k + 1][i])) {
+                        // Swap cards
+                        temp = playercard[k][i];
+                        playercard[k][i] = playercard[k + 1][i];
+                        playercard[k + 1][i] = temp;
+
+                        temp = playercard[k][i+1];
+                        playercard[k][i+1] = playercard[k + 1][i+1];
+                        playercard[k + 1][i+1] = temp;
+                    }
+                }
+                
+            }
+
+            printf("Child %d, pid %d: arranged ", i + 1, getpid());
+            // Print the sorted array
+            for (j = 0; j < 13; j++) {
+                printf("%c%c ", playercard[j][i], playercard[j][i+1]);
+            }
+            printf("\n");
+        
+        
+
 }
 
 void assignCards(char *cards[52], int fd2[4][2]){
@@ -136,12 +191,10 @@ int main()
             close(fd2[i][1]);
 
             readAssignedCards(i, fd2, childcard);
-            sortTheCardSuit(i, fd2, childcard);
+            // sortTheCardSuit(i, fd2, childcard);
         for (j = 0; j < 4; j++){
             close(fd2[j][0]);
         }
-            
-
             return 0;
         }
     }
