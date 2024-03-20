@@ -111,23 +111,13 @@ void assignCards(char *cards[52], int fd2[4][2])
     }
 }
 
-int main()
+void readFile(int i, char *cards[52])
 {
-    int fd[2];
-    int fd2[4][2];
-    int i = 0;
-    int j;
-    char childcard[13][3];
-    char *cards[52];
-
-    pid_t pid;
-    int suitCounts[4] = {0};
-
     FILE *file = fopen("card1.txt", "r");
     if (file == NULL)
     {
         printf("Failed to open the file.\n");
-        return 1;
+        exit(1);
     }
     char card[3];
     while (fscanf(file, "%2s", card) == 1)
@@ -137,6 +127,20 @@ int main()
         i++;
     }
     fclose(file);
+}
+
+int main()
+{
+    int fd[2];
+    int fd2[4][2];
+    int i = 0;
+    int j;
+    char childcard[13][3];
+    char *cards[52];
+    int childNo;
+    pid_t pid;
+
+    readFile(i, cards); // Read the file
 
     if (pipe(fd) < 0)
     {
@@ -152,8 +156,8 @@ int main()
         }
     }
 
-    // Create child processes using fork
-    int childNo;
+    //////////////////////// Child Process ////////////////////////
+    //////////////////////// Child Process ////////////////////////
     for (i = 0; i < 4; i++)
     {
         childNo = i + 1;
@@ -182,6 +186,8 @@ int main()
         }
     }
 
+    //////////////////////// Parent Process ////////////////////////
+    //////////////////////// Parent Process ////////////////////////
     printf("Parent pid %d: child players are", getpid());
     for (i = 0; i < 4; i++)
     {
