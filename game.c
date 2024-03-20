@@ -50,16 +50,17 @@ int getSuitIndex(char suit, int mode)
                 return i;
             }
         }
-    }else
+    }
+    else
+    {
+        for (int i = 0; i < 4; i++)
         {
-            for (int i = 0; i < 4; i++)
+            if (highSuits[i] == suit)
             {
-                if (highSuits[i] == suit)
-                {
-                    return i;
-                }
+                return i;
             }
         }
+    }
 
     return -1;
 }
@@ -191,25 +192,21 @@ void readFile(int i, char *cards[52], char *argv[])
 
 int main(int argc, char *argv[])
 {
-    int fd[2];
-    int fdAssignCard[4][2];
     int i, j;
     char childcard[13][3];
     char *cards[52];
 
-    char buf[80];
-
     int childNo;
     int processPid;
-
-    int round = 1;
-    int currentPlayer = 0, currentmark = 0;
-    int winner;
     char playCard[3];
-    int fdParentToChild[4][2];
-    char sendBuffer[80];
-
     char sentCard[52];
+
+    // fd
+    int fd[2];
+    int fdAssignCard[4][2];
+    int fdParentToChild[4][2];
+    int fdChildToParent[4][2];
+    char buf[80];
 
     readFile(i, cards, argv); // Read the file
 
@@ -232,24 +229,19 @@ int main(int argc, char *argv[])
             printf("Pipe creation error2\n");
             exit(1);
         }
+        if (pipe(fdChildToParent[i]) < 0)
+        {
+            printf("Pipe creation error3\n");
+            exit(1);
+        }
     }
 
     //////////////////////// Child Process ////////////////////////
     //////////////////////// Child Process ////////////////////////
     for (i = 0; i < 4; i++)
     {
-
-        int fdChildToParent[4][2];
-        char receiveBuffer[80];
-
-        for (j = 0; j < 4; j++)
-        {
-            if (pipe(fdChildToParent[j]) < 0)
-            {
-                printf("Pipe creation error3\n");
-                exit(1);
-            }
-        }
+        char childReceiveBuffer[80];
+        char childSendBuffer[80];
 
         childNo = i + 1;
         pid = fork();
@@ -272,25 +264,36 @@ int main(int argc, char *argv[])
                 close(fdAssignCard[j][0]);
             }
 
-            ssize_t bytesLength;
-            char smallestCard[3];
+            char wtemp[10] = "H3";
+            char rtemp[10];
+            ssize_t numBytes;
 
-            while ((bytesLength = read(fdParentToChild[i][0], &receiveBuffer, sizeof(sendBuffer))) > 0)
+            while ((numBytes = read(pipes_to_child[i][0], rtemp, sizeof(rtemp))) > 0)
             {
+                printf("child read \n");
+                write(pipes_from_child[i][1], wtemp, sizeof(wtemp));
+                numBytes = 0;
 
-                printf("bytesLength: %zd\n", bytesLength);
-                printf("Child %d, pid %d: play ", i + 1, getpid());
-                findSmallCard(i, childcard, smallestCard);
-
-                printf("%s", smallestCard);
-                strcpy(sentCard, smallestCard);
-
-                bytesLength = 0;
-                printf("\nbytesLength: %zd\n", bytesLength);
-
-                memset(smallestCard, 0, sizeof(smallestCard));
-                memset(receiveBuffer, 0, sizeof(receiveBuffer));
+                memset(rtemp, 0, sizeof(rtemp));
             }
+
+            // ssize_t bytesLength;
+            // char smallestCard[3];
+            // while ((bytesLength = read(fdParentToChild[i][0], childReceiveBuffer, sizeof(childReceiveBuffer))) > 0)
+            // {
+
+            //     printf("%zd", bytesLength);
+            //     // printf("Child %d, pid %d: play ", i + 1, getpid());
+            //     findSmallCard(i, childcard, smallestCard);
+
+            //     printf("%s", smallestCard);
+            //     strcpy(sentCard, smallestCard);
+
+            //     // bytesLength = 0;
+            //     // memset(&childReceiveBuffer, 0, sizeof(childReceiveBuffer));
+
+            //     // write(fdChildToParent[i][1], &sentCard, sizeof(sentCard));
+            // }
 
             return 0;
         }
@@ -301,6 +304,13 @@ int main(int argc, char *argv[])
 
     if (pid > 0)
     {
+
+        int round = 1;
+        int currentPlayer = 0, currentmark = 0;
+        int winner;
+        char sendBuffer[80];
+        char receiveBuffer[80];
+
         printf("Parent pid %d: child players are", getpid());
         for (i = 0; i < 4; i++)
         {
@@ -317,16 +327,49 @@ int main(int argc, char *argv[])
             close(fdAssignCard[i][1]);
         }
 
+        int winnerIndex = 0;
+        char wtemp[10] = "write";
+        char rtemp[10] = "read";
         sleep(1);
-        printf("Parent pid %d: round %d child %d to lead\n", getpid(), round, currentPlayer + 1);
-        strcpy(sendBuffer, "playCard");
-
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < 1; i++)
         {
-            if (i == 0)
+
+            for (currentPlayer = 0; currentPlayer < 4; currentPlayer++)
             {
-                write(fdParentToChild[currentPlayer][1], sendBuffer, sizeof(sendBuffer));
+
+                for (int i = 1; i <= 13 ; i++)
+                {
+                    printf("Parent pid %d: round %d child %d to lead", getpid(), i, winnerIndex + 1);
+                    printf("\n");
+                    for (int j = 0; j < 4; j++)
+                    {
+                        write(pipes_to_child[j][1], &wtemp, sizeof(wtemp));
+                        read(pipes_from_child[j][0], &rtemp, sizeof(rtemp));
+                        printf("%s \n", rtemp);
+                    }
+                }
+                // if(i == 0 && currentPlayer == 0){
+                //     strcpy(sendBuffer, "startgame");
+                // }
+                //     write(fdParentToChild[currentPlayer][1], sendBuffer, sizeof(sendBuffer));
+
+                // if(i == 0 && currentPlayer == 0){
+                //     memset(&sendBuffer, 0, sizeof(sendBuffer));
+                // }
+                //     sleep(1);
+
+                //     read(fdChildToParent[currentPlayer][0], receiveBuffer, sizeof(receiveBuffer));
+
+                //     // sentCard[currentPlayer] = receiveBuffer;
+                //     // sendBuffer = sentCard[currentPlayer];
+
+                //     // write(fdParentToChild[currentPlayer][1], sendBuffer, sizeof(sendBuffer));
+
+                //     printf("Parent pid %d: round %d child %d to lead\n", getpid(), round, currentPlayer + 1);
             }
+            sleep(1);
+
+            // print buffer
         }
         printf("endgame");
     }
