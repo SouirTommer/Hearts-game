@@ -9,20 +9,14 @@
 
 int main()
 {
-    int i = 0;
-    char *cards[52];
 
-    FILE *file = fopen("card1.txt", "r");
-    if (file == NULL) {
-        printf("Failed to open the file.\n");
-        return 1;
-    }
-    char card[3];
-    while (fscanf(file, "%2s", card) == 1) {
-        strcat(cards[i], card);
-        i++;
-    }
-    fclose(file);
-    printf("%s\n", *cards);
+        int playerOrder[] = {0,1,2,3};
+
+        // print player order
+
+        for (int i = 0; i < 4; i++)
+        {
+                printf("Player %d\n", playerOrder[i]);
+        }
 
 }

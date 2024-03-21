@@ -63,7 +63,8 @@
     "stdio.h": "c",
     "types.h": "c",
     "wait.h": "c",
-    "unistd.h": "c"
+    "unistd.h": "c",
+    "stdbool.h": "c"
   },
   "C_Cpp.errorSquiggles": "disabled"
 }
