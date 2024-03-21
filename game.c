@@ -162,6 +162,7 @@ int isCardInPlayRecord(char suit, char rank, char *playedCardRecord){
 }
 
 // find the play card for the player
+//!!! most important function
 void findPlayCard(int i, char playercard[13][3], char playCard[3], char *receiveBuffer, char *playedCardRecord){
     int j, k;
     int smallestRank = 13;
@@ -172,9 +173,9 @@ void findPlayCard(int i, char playercard[13][3], char playCard[3], char *receive
 
     char suit = receiveBuffer[0];
 
-    // if receiveBuffer first char is H, C, D and S, then find the smallest card for this suit
+    // if last card is played, then play the card
     if (suit == 'H' || suit == 'C' || suit == 'D' || suit == 'S'){
-
+        // this for loop is to find the smallest card
         for (j = 0; j < 13; j++){
             char card[3] = {playercard[j][i], playercard[j][i + 1], '\0'};
             int rankIndex = getRankIndex(playercard[j][i + 1], 0);
@@ -188,12 +189,12 @@ void findPlayCard(int i, char playercard[13][3], char playCard[3], char *receive
                 playCard[2] = '\0';
             }
         }
-
+        // if the player has the SQ card, then play it
         if (playCard[0] == '\0'){
             for (j = 0; j < 13; j++){
                 int rankIndex = getRankIndex(playercard[j][i + 1], 1);
                 int suitIndex = getSuitIndex(playercard[j][i], 1);
-
+    
                 if (((playercard[j][i] == 'S') &&
                      (playercard[j][i+1] == 'Q')) &&
                      (!isCardInPlayRecord(playercard[j][i], playercard[j][i + 1], playedCardRecord))){
@@ -202,6 +203,7 @@ void findPlayCard(int i, char playercard[13][3], char playCard[3], char *receive
                         playCard[2] = '\0';
                         break;
                 }else{
+                    // if the player has the highest card, then play it
                     if ((rankIndex < biggestRank || 
                     (rankIndex == biggestRank && 
                     suitIndex < biggestSuit)) && 
@@ -215,6 +217,7 @@ void findPlayCard(int i, char playercard[13][3], char playCard[3], char *receive
                 }
             }
         }
+        // for each round fist card, the player should play the biggest card
     } else{
         for (j = 0; j < 13; j++){
             int rankIndex = getRankIndex(playercard[j][i + 1], 0);
@@ -231,7 +234,7 @@ void findPlayCard(int i, char playercard[13][3], char playCard[3], char *receive
         }
     }
 }
-
+//sort the card suit when assign card to the player
 void sortTheCardSuit(int i, int fdAssignCard[4][2], char playercard[13][3]){
     int j;
     int k;
@@ -239,7 +242,7 @@ void sortTheCardSuit(int i, int fdAssignCard[4][2], char playercard[13][3]){
 
     for (j = 0; j < 13; j++){
         for (k = 0; k < 13 - j - 1; k++){
-
+            // if the rank is bigger, then swap
             if (getRankIndex(playercard[k][i + 1], 1) > getRankIndex(playercard[k + 1][i + 1], 1)){
                 temp = playercard[k][i];
                 playercard[k][i] = playercard[k + 1][i];
@@ -281,6 +284,7 @@ void readAssignedCards(int i, int fdAssignCard[4][2], char playercard[13][3]){
     close(fdAssignCard[i][0]);
 }
 
+// assign the card to the player
 void assignCards(char *cards[52], int fdAssignCard[4][2]){
     int i;
     int s;
@@ -298,6 +302,7 @@ void assignCards(char *cards[52], int fdAssignCard[4][2]){
     }
 }
 
+// read the file and store the card to the array cards
 void readFile(int i, char *cards[52], char *argv[])
 {
 
@@ -372,17 +377,19 @@ int main(int argc, char *argv[]){
             close(fd[0]);
             write(fd[1], &currentPid, sizeof(currentPid));
             close(fd[1]);
-
+            
             readAssignedCards(i, fdAssignCard, childcard);
             sortTheCardSuit(i, fdAssignCard, childcard);
             for (j = 0; j < 4; j++){
                 close(fdAssignCard[j][0]);
             }
             ssize_t bytesLength;
-
             char playCard[3];
+
+            // keep reading the parent to child pipe
             while ((bytesLength = read(fdParentToChild[i][0], childReceiveBuffer, sizeof(childReceiveBuffer))) > 0){
 
+                // if the parent send endgame, then end
                 if (strcmp(childReceiveBuffer, "endgame") == 0){
                     for (i = 0; i < 4; i++){
                         close(fdChildToParent[i][0]);
@@ -392,9 +399,9 @@ int main(int argc, char *argv[]){
                     }
                     exit(0);
                 }
-
+                //clear playCard
                 memset(playCard, 0, sizeof(playCard));
-
+                // find the play card for the player
                 findPlayCard(i, childcard, playCard, childReceiveBuffer, playedCardRecord);
 
                 printf("Child %d pid %d: play %s \n", i + 1, getpid(), playCard);
@@ -404,7 +411,7 @@ int main(int argc, char *argv[]){
                 // printf("playedCardRecord %s \n", playedCardRecord);
                 strcpy(currentRoundPlayedCard, playCard);
                 // printf("currend round sent card %s \n", currentRoundPlayedCard);
-
+                // write the play card to the parent //////////////////
                 write(fdChildToParent[i][1], currentRoundPlayedCard, sizeof(currentRoundPlayedCard));
                 bytesLength = 0;
 
