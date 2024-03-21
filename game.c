@@ -5,7 +5,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include "game.h"
 
 int getNumericRank(char rank){
     switch (rank){
@@ -433,7 +432,7 @@ int main(int argc, char *argv[]){
         int firstPlayer = 0;
         char sendBuffer[80];
         char receiveBuffer[80];
-        int score[4];
+        int score[4] = {0};
         int j = 0;
 
         printf("Parent pid %d: child players are", getpid());
@@ -483,7 +482,7 @@ int main(int argc, char *argv[]){
             firstPlayer = winner;
             score[winner] = calScore(sendBuffer, score, winner);
 
-            sleep(1);
+            // sleep(1);
             memset(&sendBuffer, 0, sizeof(sendBuffer));
             memset(&receiveBuffer, 0, sizeof(receiveBuffer));
             memset(playerOrder, 0, sizeof(playerOrder));
