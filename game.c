@@ -240,13 +240,22 @@ void findSmallCard(int i, char playercard[13][3], char smallestCard[3], char *re
             {
                 int rankIndex = getRankIndex(playercard[j][i + 1], 1);
                 int suitIndex = getSuitIndex(playercard[j][i], 1);
-                if ((rankIndex < biggestRank || (rankIndex == biggestRank && suitIndex < biggestSuit)) && (!isCardInPlayRecord(playercard[j][i], playercard[j][i + 1], playedCardRecord)))
-                {
-                    biggestSuit = suitIndex;
-                    biggestRank = rankIndex;
-                    smallestCard[0] = playercard[j][i];
-                    smallestCard[1] = playercard[j][i + 1];
-                    smallestCard[2] = '\0';
+
+                if (((playercard[j][i] == 'S') && (playercard[j][i+1] == 'Q')) && (!isCardInPlayRecord(playercard[j][i], playercard[j][i + 1], playedCardRecord))){
+                        smallestCard[0] = playercard[j][i];
+                        smallestCard[1] = playercard[j][i + 1];
+                        smallestCard[2] = '\0';
+                        break;
+                } else{
+                
+                    if ((rankIndex < biggestRank || (rankIndex == biggestRank && suitIndex < biggestSuit)) && (!isCardInPlayRecord(playercard[j][i], playercard[j][i + 1], playedCardRecord)))
+                    {
+                        biggestSuit = suitIndex;
+                        biggestRank = rankIndex;
+                        smallestCard[0] = playercard[j][i];
+                        smallestCard[1] = playercard[j][i + 1];
+                        smallestCard[2] = '\0';
+                    }
                 }
             }
         }
