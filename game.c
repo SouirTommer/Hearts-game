@@ -5,6 +5,49 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include "game.h"
+
+int getNumericRank(char rank) {
+    if (rank >= '2' && rank <= '9') {
+        return rank - '0';
+    } else {
+        switch (rank) {
+            case 'T': return 10;
+            case 'J': return 11;
+            case 'Q': return 12;
+            case 'K': return 13;
+            case 'A': return 14;
+            default: return -1;
+        }
+    }
+}
+int calScore(char *sendBuffer, int score[4], int winner){
+    int i = 0;
+    int tempScore = 0;
+    for(i =0; i<11; i+=1){
+        if(sendBuffer[i] == 'H'){
+            tempScore += 1;
+        }
+    }
+    // printf("%d \n", tempScore);
+    score[winner] += tempScore;
+
+    return score[winner];
+}
+
+int checkWin(char *sendBuffer, int score[4], int winner)
+{
+    int i = 0;
+    for(i =1; i<11; i+=3){
+        if(getNumericRank(sendBuffer[i + 3]) > getNumericRank(sendBuffer[i])){
+            winner = winner + 1;
+        }
+    }
+    
+    printf("Parent pid %d: Child %d wins the trick\n", getpid(), winner+1);
+
+    return winner;
+}
 
 int getRankIndex(char rank, int mode)
 {
@@ -65,8 +108,9 @@ int getSuitIndex(char suit, int mode)
     return -1;
 }
 
+
 // find smallest card
-void findSmallCard(int i, char playercard[13][3], char smallestCard[3])
+void findSmallCard(int i, char playercard[13][3], char smallestCard[3], char *receiveBuffer)
 {
     // find the smallest card
     int j;
@@ -74,17 +118,40 @@ void findSmallCard(int i, char playercard[13][3], char smallestCard[3])
     int smallestSuit = 4;
     int suitIndex;
 
-    for (j = 0; j < 13; j++)
-    {
-        int rank = getRankIndex(playercard[j][i + 1], 0);
-        int suit = getSuitIndex(playercard[j][i], 0);
-        if (rank < smallestRank || (rank == smallestRank && suit < smallestSuit))
+    char suit = receiveBuffer[0];
+    int k;
+
+    //if receiveBuffer first char is H, C, D and S, then find the smallest card for this suit
+
+    // if receiveBuffer first char is H, C, D and S, then find the smallest card for this suit
+    if (suit == 'H' || suit == 'C' || suit == 'D' || suit == 'S') {
+
+        for (j = 0; j < 13; j++)
         {
-            smallestSuit = suit;
-            smallestRank = rank;
-            smallestCard[0] = playercard[j][i];
-            smallestCard[1] = playercard[j][i + 1];
-            smallestCard[2] = '\0';
+            char card[3] = {playercard[j][i], playercard[j][i + 1], '\0'};
+            int rank = getRankIndex(playercard[j][i + 1], 0);
+            if ((rank < smallestRank && suit == playercard[j][i]) && (strstr(receiveBuffer, card) == NULL))
+            {
+                smallestRank = rank;
+                smallestCard[0] = playercard[j][i];
+                smallestCard[1] = playercard[j][i + 1];
+                smallestCard[2] = '\0';
+            }
+        }
+    } else{
+
+        for (j = 0; j < 13; j++)
+        {
+            int rank = getRankIndex(playercard[j][i + 1], 0);
+            int suit = getSuitIndex(playercard[j][i], 0);
+            if (rank < smallestRank || (rank == smallestRank && suit < smallestSuit))
+            {
+                smallestSuit = suit;
+                smallestRank = rank;
+                smallestCard[0] = playercard[j][i];
+                smallestCard[1] = playercard[j][i + 1];
+                smallestCard[2] = '\0';
+            }
         }
     }
 }
@@ -263,37 +330,26 @@ int main(int argc, char *argv[])
             {
                 close(fdAssignCard[j][0]);
             }
+            ssize_t bytesLength;
 
-            char wtemp[10] = "H3";
-            char rtemp[10];
-            ssize_t numBytes;
-
-            while ((numBytes = read(pipes_to_child[i][0], rtemp, sizeof(rtemp))) > 0)
+            char smallestCard[3];
+            while ((bytesLength = read(fdParentToChild[i][0], childReceiveBuffer, sizeof(childReceiveBuffer))) > 0)
             {
-                printf("child read \n");
-                write(pipes_from_child[i][1], wtemp, sizeof(wtemp));
-                numBytes = 0;
+                
+                findSmallCard(i, childcard, smallestCard, childReceiveBuffer);
 
-                memset(rtemp, 0, sizeof(rtemp));
+                printf("Child %d pid %d: play %s \n", i+1, getpid(), smallestCard);
+
+                strcat(sentCard, smallestCard);
+                strcat(sentCard, " ");
+
+                write(fdChildToParent[i][1], sentCard, sizeof(sentCard));
+                bytesLength = 0;
+
+                
+
+                memset(childReceiveBuffer, 0, sizeof(childReceiveBuffer));
             }
-
-            // ssize_t bytesLength;
-            // char smallestCard[3];
-            // while ((bytesLength = read(fdParentToChild[i][0], childReceiveBuffer, sizeof(childReceiveBuffer))) > 0)
-            // {
-
-            //     printf("%zd", bytesLength);
-            //     // printf("Child %d, pid %d: play ", i + 1, getpid());
-            //     findSmallCard(i, childcard, smallestCard);
-
-            //     printf("%s", smallestCard);
-            //     strcpy(sentCard, smallestCard);
-
-            //     // bytesLength = 0;
-            //     // memset(&childReceiveBuffer, 0, sizeof(childReceiveBuffer));
-
-            //     // write(fdChildToParent[i][1], &sentCard, sizeof(sentCard));
-            // }
 
             return 0;
         }
@@ -307,9 +363,12 @@ int main(int argc, char *argv[])
 
         int round = 1;
         int currentPlayer = 0, currentmark = 0;
-        int winner;
+        int winner=0;
+        int firstPlayer = 0;
         char sendBuffer[80];
         char receiveBuffer[80];
+        int score[4];
+        int j = 0;
 
         printf("Parent pid %d: child players are", getpid());
         for (i = 0; i < 4; i++)
@@ -327,56 +386,49 @@ int main(int argc, char *argv[])
             close(fdAssignCard[i][1]);
         }
 
-        int winnerIndex = 0;
-        char wtemp[10] = "write";
-        char rtemp[10] = "read";
         sleep(1);
-        for (i = 0; i < 1; i++)
+
+        for (int i = 0; i < 2; i++)
         {
-
-            for (currentPlayer = 0; currentPlayer < 4; currentPlayer++)
+            printf("Parent pid %d: round %d child %d to lead", getpid(), i+1, firstPlayer + 1);
+            printf("\n");
+            
+            for (j = 0; j < 4; j++)
             {
+                currentPlayer = (firstPlayer + j) % 4;
 
-                for (int i = 1; i <= 13 ; i++)
-                {
-                    printf("Parent pid %d: round %d child %d to lead", getpid(), i, winnerIndex + 1);
-                    printf("\n");
-                    for (int j = 0; j < 4; j++)
-                    {
-                        write(pipes_to_child[j][1], &wtemp, sizeof(wtemp));
-                        read(pipes_from_child[j][0], &rtemp, sizeof(rtemp));
-                        printf("%s \n", rtemp);
-                    }
+                if(i == 0 && j == 0){
+                    strcpy(sendBuffer, "go");
                 }
-                // if(i == 0 && currentPlayer == 0){
-                //     strcpy(sendBuffer, "startgame");
-                // }
-                //     write(fdParentToChild[currentPlayer][1], sendBuffer, sizeof(sendBuffer));
+                write(fdParentToChild[currentPlayer][1], &sendBuffer, sizeof(sendBuffer));
+                
+                if(i == 0 && j == 0){
+                    memset(&sendBuffer, 0, sizeof(sendBuffer));
+                }
+                sleep(1);
 
-                // if(i == 0 && currentPlayer == 0){
-                //     memset(&sendBuffer, 0, sizeof(sendBuffer));
-                // }
-                //     sleep(1);
+                read(fdChildToParent[currentPlayer][0], receiveBuffer, sizeof(receiveBuffer));
 
-                //     read(fdChildToParent[currentPlayer][0], receiveBuffer, sizeof(receiveBuffer));
+                // add value receiveBuffer  to sendBuffer 
+                strcat(sendBuffer, receiveBuffer);
 
-                //     // sentCard[currentPlayer] = receiveBuffer;
-                //     // sendBuffer = sentCard[currentPlayer];
 
-                //     // write(fdParentToChild[currentPlayer][1], sendBuffer, sizeof(sendBuffer));
-
-                //     printf("Parent pid %d: round %d child %d to lead\n", getpid(), round, currentPlayer + 1);
+                // printf("hi %s \n", sendBuffer);
             }
+            //add sendBuffer to checkwin function
+            winner = checkWin(sendBuffer, score, winner);
+            firstPlayer = winner;
+            score[winner] = calScore(sendBuffer, score, winner);
+
             sleep(1);
-
-            // print buffer
+            memset(&sendBuffer, 0, sizeof(sendBuffer));
         }
-        printf("endgame");
-    }
+    printf("endgame");
+}
 
-    for (i = 0; i < 4; i++)
-    {
-        wait(NULL);
-    }
-    return 0;
+for (i = 0; i < 4; i++)
+{
+    wait(NULL);
+}
+return 0;
 }
