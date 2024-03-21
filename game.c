@@ -58,7 +58,6 @@ int calScore(char *sendBuffer, int score[4], int winner)
             tempScore += 13;
         }
     }
-    // printf("%d \n", tempScore);
     score[winner] += tempScore;
 
     int found26 = 0;
@@ -83,9 +82,6 @@ int calScore(char *sendBuffer, int score[4], int winner)
         }
     }
 
-    // print current score
-    // printf("Current Score is %d %d %d %d\n", score[0], score[1], score[2], score[3]);
-
     return score[winner];
 }
 
@@ -96,8 +92,6 @@ int checkWin(char *sendBuffer, int playerOrder[4])
 
     int currentMaxRank = getNumericRank(sendBuffer[1]);
     int currentSuit = sendBuffer[0];
-
-    // printf("sendBuffer is %s\n", sendBuffer);
 
     for (i = 1; i < 11; i += 3)
     {
@@ -112,12 +106,10 @@ int checkWin(char *sendBuffer, int playerOrder[4])
 
         if (nextRank > currentMaxRank)
         {
-            // printf("true because %d > %d \n", nextRank, currentMaxRank);
             currentMaxRank = nextRank;
             winner = (i + 3) / 3;
         }
     }
-    // printf("\nwinner index is %d\n", winner);
 
     winner = playerOrder[winner];
 
@@ -185,13 +177,11 @@ int getSuitIndex(char suit, int mode)
     return -1;
 }
 
-// is in the cardRecord isCardInPlayRecord
 int isCardInPlayRecord(char suit, char rank, char *playedCardRecord)
 {
     int i;
     for (i = 0; playedCardRecord[i] != '\0'; i += 3)
     {
-        // printf("if card %c%c == to record %c%c\n", suit, rank, playedCardRecord[i], playedCardRecord[i+1]);
         if ((playedCardRecord[i] == suit) && (playedCardRecord[i + 1] == rank))
         {
             return 1;
@@ -202,16 +192,12 @@ int isCardInPlayRecord(char suit, char rank, char *playedCardRecord)
 
 void findPlayCard(int i, char playercard[13][3], char playCard[3], char *receiveBuffer, char *playedCardRecord)
 {
-    // find the smallest card
     int j, k;
     int smallestRank = 13;
     int smallestSuit = 4;
     int biggestRank = 13;
     int biggestSuit = 4;
-
     int suitIndex;
-
-    // int findMode = 1; // 0 for smallcard, 1 for discard
 
     char suit = receiveBuffer[0];
 
@@ -283,7 +269,6 @@ void sortTheCardSuit(int i, int fdAssignCard[4][2], char playercard[13][3])
     int k;
     char temp;
 
-    // Bubble sort by suit S>H>C>D
     for (j = 0; j < 13; j++)
     {
         for (k = 0; k < 13 - j - 1; k++)
@@ -291,7 +276,6 @@ void sortTheCardSuit(int i, int fdAssignCard[4][2], char playercard[13][3])
 
             if (getRankIndex(playercard[k][i + 1], 1) > getRankIndex(playercard[k + 1][i + 1], 1))
             {
-                // Swap cards
                 temp = playercard[k][i];
                 playercard[k][i] = playercard[k + 1][i];
                 playercard[k + 1][i] = temp;
@@ -302,7 +286,6 @@ void sortTheCardSuit(int i, int fdAssignCard[4][2], char playercard[13][3])
             }
             if (getSuitIndex(playercard[k][i], 1) > getSuitIndex(playercard[k + 1][i], 1))
             {
-                // Swap cards
                 temp = playercard[k][i];
                 playercard[k][i] = playercard[k + 1][i];
                 playercard[k + 1][i] = temp;
@@ -389,7 +372,6 @@ int main(int argc, char *argv[])
     char playedCardRecord[52];
     char currentRoundPlayedCard[3];
 
-    // public fd
     int fd[2];
     int fdAssignCard[4][2];
     int fdParentToChild[4][2];
@@ -397,7 +379,7 @@ int main(int argc, char *argv[])
 
     int playerOrder[4];
 
-    readFile(i, cards, argv); // Read the file
+    readFile(i, cards, argv);
 
     pid_t pid;
 
@@ -481,9 +463,7 @@ int main(int argc, char *argv[])
                 strcat(playedCardRecord, " ");
 
                 // printf("playedCardRecord %s \n", playedCardRecord);
-
                 strcpy(currentRoundPlayedCard, playCard);
-
                 // printf("currend round sent card %s \n", currentRoundPlayedCard);
 
                 write(fdChildToParent[i][1], currentRoundPlayedCard, sizeof(currentRoundPlayedCard));
@@ -529,7 +509,7 @@ int main(int argc, char *argv[])
 
         sleep(1);
 
-        for (int i = 0; i < 13; i++) ////////////////////round
+        for (int i = 0; i < 13; i++) ////////////////////round/////////////
         {
             printf("Parent pid %d: round %d child %d to lead", getpid(), i + 1, firstPlayer + 1);
             printf("\n");
@@ -579,7 +559,6 @@ int main(int argc, char *argv[])
 
         }
         printf("Parent pid %d: game completed\n", getpid());
-        //print score
         printf("Parent pid %d: score = <%d %d %d %d>\n", getpid(), score[0], score[1], score[2], score[3]);
     }
 
