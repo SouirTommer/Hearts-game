@@ -71,6 +71,8 @@ int calScore(char *sendBuffer, int score[4], int winner){
         }
     }
 
+    // printf("Score = <%d %d %d %d>\n", score[0], score[1], score[2], score[3]);
+
     return score[winner];
 }
 
@@ -201,7 +203,19 @@ void findPlayCard(int i, char playercard[13][3], char playCard[3], char *receive
                         playCard[1] = playercard[j][i + 1];
                         playCard[2] = '\0';
                         break;
-                }else{
+                        
+                    // if the player have highest H card, then play it
+                } else if ((rankIndex < biggestRank || 
+                    (rankIndex == biggestRank)) &&
+                    playercard[j][i] == 'H' && 
+                    (!isCardInPlayRecord(playercard[j][i], playercard[j][i + 1], playedCardRecord))){
+                        // printf("player have H card so play H card first\n");
+                        biggestRank = rankIndex;
+                        playCard[0] = playercard[j][i];
+                        playCard[1] = playercard[j][i + 1];
+                        playCard[2] = '\0';
+                        break;
+                } else{
                     // if the player has the highest card, then play it
                     if ((rankIndex < biggestRank || 
                     (rankIndex == biggestRank && 
